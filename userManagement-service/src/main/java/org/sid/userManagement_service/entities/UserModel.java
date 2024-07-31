@@ -21,8 +21,11 @@ public class UserModel {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String keycloakId; // Field to store Keycloak user ID
     private String email;
-    private String name;
+    private String username ;
+    private String firstName;
+    private String LastName;
     private String password;
     private String role;
 

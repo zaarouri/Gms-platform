@@ -1,9 +1,11 @@
 package org.sid.apiconsumption_service.models;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.Map;
 @Data
+@Builder
 public class ApiModel {
     private String id;
     private String name;

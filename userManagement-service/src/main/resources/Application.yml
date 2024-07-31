@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: userManagement-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/platform-db?createDatabaseIfNotExist=true
+    username: root
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    show-sql: true
+  config:
+    import: "optional:configserver:http://localhost:8888/"
+
+server:
+  port: 8081
+app:
+  keycloak:
+    admin:
+      clientId: test
+      clientSecret: xAc8SETXpDBet9nB6Tqyxo3fOgHWJ27p
+    realm: GmsPlatform-realm
+    serverUrl: http://localhost:8080

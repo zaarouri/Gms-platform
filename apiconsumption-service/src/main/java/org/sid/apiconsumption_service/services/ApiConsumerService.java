@@ -2,9 +2,11 @@ package org.sid.apiconsumption_service.services;
 
 import org.sid.apiconsumption_service.models.ApiModel;
 
+import java.util.Map;
+
 
 public interface ApiConsumerService {
 
-    String consumeApi(ApiModel apiModel, String requestBody);
+    String consumeApi(String apiId, Map<String, String> parameters);
     boolean supports(ApiModel apiModel);
 }

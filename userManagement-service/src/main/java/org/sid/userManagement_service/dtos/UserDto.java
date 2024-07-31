@@ -10,7 +10,10 @@ import java.util.List;
 public class UserDto {
     private Long id;
     private String email;
-    private String name;
+    private String keycloakId; // Field to store Keycloak user ID
+    private String firstName;
+    private String LastName;
+    private  String username ;
     private String password;
     private String role;
     private List<String> apiModelsIds = new ArrayList<>();
