@@ -7,21 +7,22 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@RestController()
-@RequestMapping("/consume")
+@RestController
+@RequestMapping("/api/consume")
 @RequiredArgsConstructor
 public class ApiConsumptionController {
-    private final ApiConsumerService apiConsumerService;
-    @GetMapping("/test")
-    String test() {
-        return "test";
+
+    private final ApiConsumerService apiConsumptionService;
+
+
+
+    @RequestMapping(value = "/{apiId}", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+    public ResponseEntity<String> consumeApi(
+            @PathVariable String apiId,
+            @RequestBody(required = false) String requestBody,
+            @RequestParam Map<String, String> queryParams,
+            @RequestHeader Map<String, String> headers) {
+
+        return apiConsumptionService.consumeApi(apiId, requestBody, queryParams, headers);
     }
-//    public (ApiConsumerService apiConsumerService) {}
-
-    @PostMapping("/{apiId}")
-    public ResponseEntity<String> consumeApi(@PathVariable String apiId, @RequestBody Map<String, String> parameters) {
-    String result = apiConsumerService.consumeApi(apiId, parameters);
-    return ResponseEntity.ok(result);
-}
-
 }

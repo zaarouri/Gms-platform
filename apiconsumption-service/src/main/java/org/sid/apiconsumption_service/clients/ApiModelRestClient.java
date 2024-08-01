@@ -10,7 +10,7 @@ import java.util.List;
 @FeignClient(name = "apiManagement-service", url = "http://localhost:8082")
 public interface ApiModelRestClient {
 
-    @GetMapping("/apis")
+    @GetMapping("/apis/all")
     List<ApiModel> getAll();
 
     @GetMapping("/apis/{id}")
