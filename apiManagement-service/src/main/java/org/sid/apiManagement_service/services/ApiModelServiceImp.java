@@ -54,6 +54,7 @@ public class ApiModelServiceImp implements ApiModelService {
             throw new EntityNotFoundException("API not found with id: " + id);
         }
         ApiModel apiModel = apiModelMapper.toEntity(apiModelDto);
+        apiModel.setId(id);
         ApiModel updatedModel = apiModelRepository.save(apiModel);
         return apiModelMapper.toDto(updatedModel);
     }

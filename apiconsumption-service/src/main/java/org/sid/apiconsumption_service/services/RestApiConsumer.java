@@ -1,5 +1,6 @@
 package org.sid.apiconsumption_service.services;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.sid.apiconsumption_service.clients.ApiModelRestClient;
 import org.sid.apiconsumption_service.models.ApiModel;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -16,7 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 
-@Component
+@Service
+@Transactional
 @RequiredArgsConstructor
 public class RestApiConsumer implements ApiConsumerService {
 

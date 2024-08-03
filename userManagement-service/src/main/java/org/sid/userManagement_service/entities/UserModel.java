@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.sid.userManagement_service.models.ApiModel;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 
@@ -18,21 +19,21 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserModel {
-
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String keycloakId; // Field to store Keycloak user ID
+    @Id
+    private String keycloakId;
     private String email;
-    private String username ;
-    private String firstName;
-    private String LastName;
+    private String username;
+    private String name;
     private String password;
-    private String role;
-
     @ElementCollection
-    @CollectionTable(name = "user_api", joinColumns = @JoinColumn(name = "user_id"))
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "keycloak_id"))
+    @Column(name = "role")
+    private List<String> roles = new ArrayList<>();
+    @ElementCollection
+    @CollectionTable(name = "user_api", joinColumns = @JoinColumn(name = "user_keycloakId"))
     @Column(name = "api_id")
     private List<String> apiModelsIds = new ArrayList<>();
     @Transient
     private List<ApiModel> apiModels = new ArrayList<>();
+
 }

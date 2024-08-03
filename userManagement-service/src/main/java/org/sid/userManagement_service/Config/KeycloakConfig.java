@@ -1,5 +1,4 @@
-package org.sid.userManagement_service.config;
-
+package org.sid.userManagement_service.Config;
 
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -18,21 +17,14 @@ public class KeycloakConfig {
     private String realm;
     @Value("${app.keycloak.serverUrl}")
     private String serverUrl;
-
-
     @Bean
     public Keycloak keycloak(){
-
         return KeycloakBuilder.builder()
                 .clientSecret(clientSecret)
                 .clientId(clientId)
                 .grantType("client_credentials")
                 .realm(realm)
                 .serverUrl(serverUrl)
-                .username("manal")
-                .password("1234")
                 .build();
     }
 }
-
-
