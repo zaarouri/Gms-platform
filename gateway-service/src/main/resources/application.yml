@@ -1,0 +1,32 @@
+server:
+  port: 9999
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      routes:
+        - id: config-service
+          uri: http://localhost:8888/
+          predicates:
+            - Path=/configService/**
+
+        - id: apiManagement-service
+          uri: http://localhost:8082/
+          predicates:
+            - Path=/apiManagement-service/**
+
+        - id: userManagement-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/userManagement-service/**
+
+        - id: apiconsumption-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/apiconsumption-service/**
+
+  config:
+    import: "optional:configserver:http://localhost:8888/"

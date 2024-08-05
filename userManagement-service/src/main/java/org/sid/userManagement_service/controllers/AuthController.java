@@ -9,15 +9,16 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 @RequestMapping("/auth")
 
 public class AuthController {
     private final AuthenticationService authService;
 
     @PostMapping("/login")
-    public UserDto login(@RequestBody LoginRequest loginRequest) {
+    public AuthResponse login(@RequestBody LoginRequest loginRequest) {
         AuthResponse authResponse = authService.login(loginRequest.getUsername(), loginRequest.getPassword());
-        return authResponse.getUser();
+        return authResponse;
     }
 
     @PostMapping("/logout")

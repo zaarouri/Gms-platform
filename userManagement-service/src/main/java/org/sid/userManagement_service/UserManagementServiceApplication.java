@@ -1,6 +1,5 @@
 package org.sid.userManagement_service;
 
-import org.sid.userManagement_service.entities.UserModel;
 import org.sid.userManagement_service.repositories.UserRepo;
 import org.sid.userManagement_service.services.UserService;
 import org.springframework.boot.CommandLineRunner;
