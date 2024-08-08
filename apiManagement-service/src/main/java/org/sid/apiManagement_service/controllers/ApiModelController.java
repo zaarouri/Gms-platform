@@ -43,9 +43,9 @@ public class ApiModelController {
         return ResponseEntity.ok(updatedApi);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteApi(@PathVariable String id) {
-        apiModelService.deleteApi(id);
+    @PostMapping("/archive/{id}")
+    public ResponseEntity<Void> archiveApi(@PathVariable String id) {
+        apiModelService.archiveApiModel(id);
         return ResponseEntity.noContent().build();
     }
 

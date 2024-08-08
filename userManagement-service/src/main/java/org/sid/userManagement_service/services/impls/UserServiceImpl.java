@@ -23,7 +23,6 @@ import org.sid.userManagement_service.exception.UserNotFoundException;
 import org.sid.userManagement_service.mappers.UserMapper;
 import org.sid.userManagement_service.models.ApiModel;
 import org.sid.userManagement_service.repositories.UserRepo;
-import org.sid.userManagement_service.services.AuthenticationService;
 import org.sid.userManagement_service.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -46,7 +45,6 @@ public class UserServiceImpl implements UserService {
     );
     private final ApiModelRestClient apiModelRestClient;
     private final UserMapper mapper;
-    private final AuthenticationService authenticationService;
     private final UserRepo userRepository;
     private final Keycloak keycloak;
     @Value("${app.keycloak.realm}")
@@ -82,7 +80,6 @@ public class UserServiceImpl implements UserService {
         }
         UserModel userModel = mapper.toEntity(userDto);
         userModel.setKeycloakId(keycloakId);
-        userModel.setPassword(authenticationService.hashPassword(userDto.getPassword()));
         userModel.setRoles(userDto.getRoles());
         UserModel saved = userRepository.save(userModel);
         return mapper.toDto(saved);
@@ -98,7 +95,6 @@ public class UserServiceImpl implements UserService {
 
         if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
             validatePassword(userDto.getPassword());
-            userModel.setPassword(authenticationService.hashPassword(userDto.getPassword()));
         }
         try {
             updateUserInKeycloak(keycloakId, userDto);
@@ -152,7 +148,6 @@ public class UserServiceImpl implements UserService {
 
         UserModel userModel = userRepository.findById(keycloakId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + keycloakId));
-
         List<String> apiModelsIds = Optional.ofNullable(userModel.getApiModelsIds()).orElse(new ArrayList<>());
         if (!apiModelsIds.contains(apiId)) {
             apiModelsIds.add(apiId);

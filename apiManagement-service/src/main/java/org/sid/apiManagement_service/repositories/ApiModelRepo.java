@@ -9,8 +9,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ApiModelRepo extends JpaRepository<ApiModel, String> {
-    public boolean existsById(String id);
+    boolean existsById(String id);
+
+    boolean existsByName(String name);
+
     List<ApiModel> findByType(ApiType type);
+
     List<ApiModel> findBySupportedMethodsContaining(HttpMethod method);
 
+    List<ApiModel> findByArchivedFalse();
+
+    List<ApiModel> findByArchivedTrue();
 }

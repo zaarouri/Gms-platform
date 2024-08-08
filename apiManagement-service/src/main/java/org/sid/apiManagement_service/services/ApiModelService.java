@@ -1,5 +1,6 @@
 package org.sid.apiManagement_service.services;
 
+import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import org.sid.apiManagement_service.dtos.ApiModelDto;
 import org.sid.apiManagement_service.enums.ApiType;
@@ -9,18 +10,19 @@ import java.util.List;
 
 
 public interface ApiModelService {
-    public ApiModelDto createApi(ApiModelDto apiModelDto) throws EntityNotFoundException;
+     ApiModelDto createApi(ApiModelDto apiModelDto) throws EntityExistsException;
 
-    public ApiModelDto getApiById(String id) throws EntityNotFoundException;
+     ApiModelDto getApiById(String id) throws EntityNotFoundException;
 
-    public List<ApiModelDto> getAllApis() throws EntityNotFoundException;
+     List<ApiModelDto> getAllApis() throws EntityNotFoundException;
 
-    public ApiModelDto updateApi(String id, ApiModelDto apiModelDto) throws EntityNotFoundException;
+     ApiModelDto updateApi(String id, ApiModelDto apiModelDto) throws EntityNotFoundException;
 
-    public void deleteApi(String id) throws EntityNotFoundException;
+     ApiModelDto archiveApiModel(String apiId) throws  EntityNotFoundException;
 
-    public List<ApiModelDto> getApisByType(ApiType type) throws EntityNotFoundException;
+     List<ApiModelDto> getApisByType(ApiType type) throws EntityNotFoundException;
 
-    public List<ApiModelDto> getApisSupportingMethod(HttpMethod method) throws EntityNotFoundException;
+     List<ApiModelDto> getApisSupportingMethod(HttpMethod method) throws EntityNotFoundException;
+    List<ApiModelDto> getAllArchivedApis() throws EntityNotFoundException;
 }
 
