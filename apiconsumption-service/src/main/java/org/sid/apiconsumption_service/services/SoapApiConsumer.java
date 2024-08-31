@@ -4,16 +4,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.sid.apiconsumption_service.clients.ApiModelRestClient;
 import org.sid.apiconsumption_service.models.ApiModel;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.ws.client.core.WebServiceTemplate;
-import org.springframework.ws.soap.client.core.SoapActionCallback;
-import org.springframework.ws.soap.client.SoapFaultClientException;
-import org.springframework.xml.transform.StringSource;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Map;
 
 @Service
@@ -21,8 +19,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SoapApiConsumer implements ApiConsumerService {
 
-
-    private final WebServiceTemplate webServiceTemplate;
     private final ApiModelRestClient apiClient;
 
     @Override
@@ -30,32 +26,67 @@ public class SoapApiConsumer implements ApiConsumerService {
         // Fetch API details from the management service
         ApiModel apiModel = apiClient.getById(apiId);
 
-        // Create request headers
-        HttpHeaders requestHeaders = new HttpHeaders();
-        headers.forEach(requestHeaders::add);
-        requestHeaders.setContentType(MediaType.TEXT_XML);
+        // Ensure the URL is not empty
+        String url = apiModel.getUrl();
+        if (url == null || url.isEmpty()) {
+            logError("The endpoint URL is not defined for the API.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("The endpoint URL is not defined for the API.");
+        }
 
-        // Build the SOAP request body
+        // Build the SOAP request body dynamically
         String soapBody = buildSoapBody(apiModel, requestBody);
 
-        // Create SOAP callback
-        SoapActionCallback callback = new SoapActionCallback(apiModel.getSoapAction());
+        try {
+            // Use HttpClient to send the SOAP request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "text/xml; charset=utf-8");
 
-        // Send SOAP request
-        String response = (String) webServiceTemplate.marshalSendAndReceive(apiModel.getUrl(), soapBody, callback);
+            // Set SOAPAction if available
+            if (apiModel.getSoapAction() != null && !apiModel.getSoapAction().isEmpty()) {
+                requestBuilder.header("SOAPAction", apiModel.getSoapAction());
+            }
 
-        return ResponseEntity.ok(response);
+            // Add additional headers if provided, but avoid restricted headers like Content-Length and Host
+            if (headers != null) {
+                headers.forEach((key, value) -> {
+                    if (!"content-length".equalsIgnoreCase(key) && !"host".equalsIgnoreCase(key)) {
+                        requestBuilder.header(key, value);
+                    }
+                });
+            }
+
+            // Build the POST request with the SOAP body
+            HttpRequest request = requestBuilder.POST(HttpRequest.BodyPublishers.ofString(soapBody)).build();
+
+            // Send the request and get the response
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Log the response
+            logSoapResponse(response.body());
+
+            return ResponseEntity.status(response.statusCode()).body(response.body());
+        } catch (Exception e) {
+            // Log general error
+            logError(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error consuming SOAP API: " + e.getMessage());
+        }
     }
 
     private String buildSoapBody(ApiModel apiModel, String requestBody) {
-        // Extract the namespace, method name, and parameters from ApiModel
-        String namespace = apiModel.getWsdlUrl(); // This should be parsed to get the namespace
-        String methodName = apiModel.getSoapAction(); // Example extraction, might need adjustment
+        // Extract the correct namespace and method name dynamically from ApiModel
+        String namespace = "http://webservice.soap_server.sid.org/"; // Use the correct namespace
+        String methodName = extractMethodName(apiModel.getSoapAction()); // Extract the method name from SOAP action
 
-        // Adjust the namespace extraction as necessary, example here assumes a single namespace
-        namespace = "http://www.oorsprong.org/websamples.countryinfo"; // Placeholder, replace with actual logic
+        if (methodName == null || methodName.isEmpty()) {
+            methodName = "getAllProducts"; // Fallback method name; replace with an appropriate default if necessary
+            logError("Method name could not be determined from SOAP action. Using default method: " + methodName);
+        }
 
-        // Build dynamic SOAP request body based on ApiModel
+        // Build the SOAP request body dynamically
         StringBuilder soapBodyBuilder = new StringBuilder();
         soapBodyBuilder.append(String.format(
                 "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"%s\">" +
@@ -64,22 +95,44 @@ public class SoapApiConsumer implements ApiConsumerService {
         ));
 
         // Include method and parameters dynamically
-        soapBodyBuilder.append(String.format(
-                "<web:%s>", methodName
-        ));
+        soapBodyBuilder.append(String.format("<web:%s>", methodName));
+        soapBodyBuilder.append(requestBody); // Append request body as is
+        soapBodyBuilder.append(String.format("</web:%s>", methodName));
 
-        // Example for adding parameters, adjust based on actual ApiModel structure
-        // Assuming requestBody contains the parameter or needs to be transformed
-        soapBodyBuilder.append(requestBody);
-
-        soapBodyBuilder.append(String.format(
-                "</web:%s>" +
-                        "</soapenv:Body>" +
-                        "</soapenv:Envelope>", methodName
-        ));
+        soapBodyBuilder.append("</soapenv:Body></soapenv:Envelope>");
 
         return soapBodyBuilder.toString();
     }
+
+    private String extractMethodName(String soapAction) {
+        // Extract method name from the SOAPAction, assuming format like "http://.../methodNameRequest"
+        if (soapAction != null && !soapAction.isEmpty()) {
+            int lastSlashIndex = soapAction.lastIndexOf('/');
+            if (lastSlashIndex != -1) {
+                String methodNameWithRequest = soapAction.substring(lastSlashIndex + 1);
+                if (methodNameWithRequest.endsWith("Request")) {
+                    return methodNameWithRequest.replace("Request", "");
+                } else {
+                    return methodNameWithRequest; // In case there's no "Request" suffix
+                }
+            }
+        }
+        return null; // Return null if method name cannot be extracted
+    }
+
+    private void logSoapResponse(String response) {
+        System.out.println("Logging SOAP Response:");
+        System.out.println("SOAP Response: " + response);
+        System.out.println("Timestamp: " + System.currentTimeMillis());
+    }
+
+    private void logError(Exception e) {
+        System.err.println("Error: " + e.getMessage());
+        System.err.println("Timestamp: " + System.currentTimeMillis());
+    }
+
+    private void logError(String message) {
+        System.err.println("Error: " + message);
+        System.err.println("Timestamp: " + System.currentTimeMillis());
+    }
 }
-
-

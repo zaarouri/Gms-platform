@@ -14,7 +14,7 @@ public interface ApiModelRestClient {
     List<ApiModel> getAll();
 
     @GetMapping("/apis/{id}")
-    ApiModel getById(@PathVariable String id);
+    ApiModel getById(@PathVariable("id") String id);
 
 }
 

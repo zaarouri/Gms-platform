@@ -143,24 +143,23 @@ public class UserServiceImpl implements UserService {
     public UserDto assignApiModeltoUser(String apiId, String keycloakId) {
         ApiModel apiModel = apiModelRestClient.getById(apiId);
         if (apiModel == null) {
-            throw new RuntimeException("ApiModel not found");
+            throw new RuntimeException("API model not found with ID: " + apiId);
         }
 
         UserModel userModel = userRepository.findById(keycloakId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + keycloakId));
+
         List<String> apiModelsIds = Optional.ofNullable(userModel.getApiModelsIds()).orElse(new ArrayList<>());
         if (!apiModelsIds.contains(apiId)) {
             apiModelsIds.add(apiId);
+            userModel.setApiModelsIds(apiModelsIds);
+            userRepository.save(userModel);
         }
-        userModel.setApiModelsIds(apiModelsIds);
-
-        userRepository.save(userModel);
 
         UserDto userDto = mapper.toDto(userModel);
-        List<ApiModel> apiModels = apiModelsIds.stream()
+        userDto.setApiModels(apiModelsIds.stream()
                 .map(apiModelRestClient::getById)
-                .collect(Collectors.toList());
-        userDto.setApiModels(apiModels);
+                .collect(Collectors.toList()));
 
         return userDto;
     }
