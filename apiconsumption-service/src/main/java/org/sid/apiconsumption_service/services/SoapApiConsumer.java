@@ -3,7 +3,9 @@ package org.sid.apiconsumption_service.services;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.sid.apiconsumption_service.clients.ApiModelRestClient;
+import org.sid.apiconsumption_service.clients.LogsServiceClient;
 import org.sid.apiconsumption_service.models.ApiModel;
+import org.sid.apiconsumption_service.models.LogEntry;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -12,7 +14,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,10 +24,10 @@ import java.util.Map;
 public class SoapApiConsumer implements ApiConsumerService {
 
     private final ApiModelRestClient apiClient;
+    private final LogsServiceClient logsServiceClient;
 
     @Override
     public ResponseEntity<String> consumeApi(String apiId, String requestBody, Map<String, String> queryParams, Map<String, String> headers) {
-        // Fetch API details from the management service
         ApiModel apiModel = apiClient.getById(apiId);
 
         // Ensure the URL is not empty
@@ -34,8 +38,9 @@ public class SoapApiConsumer implements ApiConsumerService {
                     .body("The endpoint URL is not defined for the API.");
         }
 
-        // Build the SOAP request body dynamically
         String soapBody = buildSoapBody(apiModel, requestBody);
+        long startTime = System.currentTimeMillis();
+        int responseStatus = 500; // Default status if there is an exception
 
         try {
             // Use HttpClient to send the SOAP request
@@ -49,10 +54,10 @@ public class SoapApiConsumer implements ApiConsumerService {
                 requestBuilder.header("SOAPAction", apiModel.getSoapAction());
             }
 
-            // Add additional headers if provided, but avoid restricted headers like Content-Length and Host
+            // Add additional headers, excluding restricted ones like Host, Content-Length, etc.
             if (headers != null) {
                 headers.forEach((key, value) -> {
-                    if (!"content-length".equalsIgnoreCase(key) && !"host".equalsIgnoreCase(key)) {
+                    if (!"host".equalsIgnoreCase(key) && !"content-length".equalsIgnoreCase(key) && !"transfer-encoding".equalsIgnoreCase(key)) {
                         requestBuilder.header(key, value);
                     }
                 });
@@ -63,14 +68,24 @@ public class SoapApiConsumer implements ApiConsumerService {
 
             // Send the request and get the response
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            responseStatus = response.statusCode();  // Update status with actual response status
 
             // Log the response
             logSoapResponse(response.body());
 
-            return ResponseEntity.status(response.statusCode()).body(response.body());
+            long duration = System.currentTimeMillis() - startTime;
+
+            // Log successful API consumption
+            logConsumption(apiId, "user-ip-placeholder", responseStatus, duration, "user123", "SOAP API consumed successfully");
+
+            return ResponseEntity.status(responseStatus).body(response.body());
         } catch (Exception e) {
-            // Log general error
+            long duration = System.currentTimeMillis() - startTime;
+
+            // Log error during API consumption
             logError(e);
+            logConsumption(apiId, "user-ip-placeholder", responseStatus, duration, "user123", "Error consuming SOAP API: " + e.getMessage());
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error consuming SOAP API: " + e.getMessage());
         }
@@ -78,8 +93,8 @@ public class SoapApiConsumer implements ApiConsumerService {
 
     private String buildSoapBody(ApiModel apiModel, String requestBody) {
         // Extract the correct namespace and method name dynamically from ApiModel
-        String namespace = "http://webservice.soap_server.sid.org/"; // Use the correct namespace
-        String methodName = extractMethodName(apiModel.getSoapAction()); // Extract the method name from SOAP action
+        String namespace = "http://webservice.soap_server.sid.org/";
+        String methodName = extractMethodName(apiModel.getSoapAction());
 
         if (methodName == null || methodName.isEmpty()) {
             methodName = "getAllProducts"; // Fallback method name; replace with an appropriate default if necessary
@@ -87,21 +102,12 @@ public class SoapApiConsumer implements ApiConsumerService {
         }
 
         // Build the SOAP request body dynamically
-        StringBuilder soapBodyBuilder = new StringBuilder();
-        soapBodyBuilder.append(String.format(
+        return String.format(
                 "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"%s\">" +
                         "<soapenv:Header/>" +
-                        "<soapenv:Body>", namespace
-        ));
-
-        // Include method and parameters dynamically
-        soapBodyBuilder.append(String.format("<web:%s>", methodName));
-        soapBodyBuilder.append(requestBody); // Append request body as is
-        soapBodyBuilder.append(String.format("</web:%s>", methodName));
-
-        soapBodyBuilder.append("</soapenv:Body></soapenv:Envelope>");
-
-        return soapBodyBuilder.toString();
+                        "<soapenv:Body><web:%s>%s</web:%s></soapenv:Body></soapenv:Envelope>",
+                namespace, methodName, requestBody, methodName
+        );
     }
 
     private String extractMethodName(String soapAction) {
@@ -113,11 +119,11 @@ public class SoapApiConsumer implements ApiConsumerService {
                 if (methodNameWithRequest.endsWith("Request")) {
                     return methodNameWithRequest.replace("Request", "");
                 } else {
-                    return methodNameWithRequest; // In case there's no "Request" suffix
+                    return methodNameWithRequest;
                 }
             }
         }
-        return null; // Return null if method name cannot be extracted
+        return null;
     }
 
     private void logSoapResponse(String response) {
@@ -134,5 +140,21 @@ public class SoapApiConsumer implements ApiConsumerService {
     private void logError(String message) {
         System.err.println("Error: " + message);
         System.err.println("Timestamp: " + System.currentTimeMillis());
+    }
+
+    // Method to log API consumption
+    private void logConsumption(String apiId, String userIp, int responseStatus, long requestDuration, String userId, String additionalInfo) {
+        LogEntry log = LogEntry.builder()
+                .apiId(apiId)
+                .userIp(userIp)
+                .responseStatus(responseStatus)
+                .requestDuration(requestDuration)
+                .timestamp(new Date())
+                .userId(userId)
+                .additionalInfo(additionalInfo)
+                .build();
+
+        // Send log to LogsServiceClient
+        logsServiceClient.log(log);
     }
 }
