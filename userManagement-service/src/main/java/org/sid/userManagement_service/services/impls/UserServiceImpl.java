@@ -163,6 +163,14 @@ public class UserServiceImpl implements UserService {
 
         return userDto;
     }
+
+    @Override
+    public UserDto getUserByUsername(String username) throws UserNotFoundException {
+        UserModel user = userRepository.findByUsername(username).orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
+        UserDto userDto = mapper.toDto(user);
+        return userDto;
+    }
+
     private String createUserInKeycloak(UserDto userDto) {
         validateEmail(userDto.getEmail());
         validatePassword(userDto.getPassword());

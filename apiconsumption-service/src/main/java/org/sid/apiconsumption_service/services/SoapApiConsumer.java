@@ -30,6 +30,10 @@ public class SoapApiConsumer implements ApiConsumerService {
     public ResponseEntity<String> consumeApi(String apiId, String requestBody, Map<String, String> queryParams, Map<String, String> headers) {
         ApiModel apiModel = apiClient.getById(apiId);
 
+        //todo
+        // UserModel userModel = userClient.getUserById("hada 5asni njibo mn keycloack client fach tssali manal ");
+        // if (!userModel.getApiModelsIds().contains(apiModel.getId())) throw new RuntimeException("User not allowed to consume this api ");
+
         // Ensure the URL is not empty
         String url = apiModel.getUrl();
         if (url == null || url.isEmpty()) {

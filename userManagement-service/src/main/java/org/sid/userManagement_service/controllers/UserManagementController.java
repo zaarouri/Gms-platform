@@ -49,4 +49,8 @@ public class UserManagementController {
         UserDto userDto = userService.assignApiModeltoUser(apiId, keycloakId);
         return userDto;
     }
+    @GetMapping("/users/{username}")
+    public UserDto getUserByUsername(@RequestParam String username) {
+        return userService.getUserByUsername(username);
+    }
 }
