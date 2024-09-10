@@ -3,9 +3,11 @@ package org.sid.apiconsumption_service.services;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.sid.apiconsumption_service.clients.ApiModelRestClient;
-import org.sid.apiconsumption_service.clients.LogsServiceClient;
 import org.sid.apiconsumption_service.models.ApiModel;
 import org.sid.apiconsumption_service.models.LogEntry;
+import org.sid.apiconsumption_service.clients.LogsServiceClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -16,7 +18,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Date;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -25,14 +26,12 @@ public class SoapApiConsumer implements ApiConsumerService {
 
     private final ApiModelRestClient apiClient;
     private final LogsServiceClient logsServiceClient;
+    private static final Logger logger = LoggerFactory.getLogger(SoapApiConsumer.class);
 
     @Override
     public ResponseEntity<String> consumeApi(String apiId, String requestBody, Map<String, String> queryParams, Map<String, String> headers) {
+        // Fetch API details from the management service
         ApiModel apiModel = apiClient.getById(apiId);
-
-        //todo
-        // UserModel userModel = userClient.getUserById("hada 5asni njibo mn keycloack client fach tssali manal ");
-        // if (!userModel.getApiModelsIds().contains(apiModel.getId())) throw new RuntimeException("User not allowed to consume this api ");
 
         // Ensure the URL is not empty
         String url = apiModel.getUrl();
@@ -42,9 +41,10 @@ public class SoapApiConsumer implements ApiConsumerService {
                     .body("The endpoint URL is not defined for the API.");
         }
 
+        // Build the SOAP request body dynamically
         String soapBody = buildSoapBody(apiModel, requestBody);
         long startTime = System.currentTimeMillis();
-        int responseStatus = 500; // Default status if there is an exception
+        int responseStatus = HttpStatus.INTERNAL_SERVER_ERROR.value();
 
         try {
             // Use HttpClient to send the SOAP request
@@ -58,10 +58,10 @@ public class SoapApiConsumer implements ApiConsumerService {
                 requestBuilder.header("SOAPAction", apiModel.getSoapAction());
             }
 
-            // Add additional headers, excluding restricted ones like Host, Content-Length, etc.
+            // Add additional headers if provided
             if (headers != null) {
                 headers.forEach((key, value) -> {
-                    if (!"host".equalsIgnoreCase(key) && !"content-length".equalsIgnoreCase(key) && !"transfer-encoding".equalsIgnoreCase(key)) {
+                    if (!"content-length".equalsIgnoreCase(key) && !"host".equalsIgnoreCase(key)) {
                         requestBuilder.header(key, value);
                     }
                 });
@@ -72,17 +72,17 @@ public class SoapApiConsumer implements ApiConsumerService {
 
             // Send the request and get the response
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            responseStatus = response.statusCode();  // Update status with actual response status
+            responseStatus = response.statusCode();
 
             // Log the response
             logSoapResponse(response.body());
 
             long duration = System.currentTimeMillis() - startTime;
 
-            // Log successful API consumption
+            // Log API consumption to logs service
             logConsumption(apiId, "user-ip-placeholder", responseStatus, duration, "user123", "SOAP API consumed successfully");
 
-            return ResponseEntity.status(responseStatus).body(response.body());
+            return ResponseEntity.status(response.statusCode()).body(response.body());
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
 
@@ -97,8 +97,8 @@ public class SoapApiConsumer implements ApiConsumerService {
 
     private String buildSoapBody(ApiModel apiModel, String requestBody) {
         // Extract the correct namespace and method name dynamically from ApiModel
-        String namespace = "http://webservice.soap_server.sid.org/";
-        String methodName = extractMethodName(apiModel.getSoapAction());
+        String namespace = "http://webservice.soap_server.sid.org/"; // Use the correct namespace
+        String methodName = extractMethodName(apiModel.getSoapAction()); // Extract the method name from SOAP action
 
         if (methodName == null || methodName.isEmpty()) {
             methodName = "getAllProducts"; // Fallback method name; replace with an appropriate default if necessary
@@ -131,22 +131,20 @@ public class SoapApiConsumer implements ApiConsumerService {
     }
 
     private void logSoapResponse(String response) {
-        System.out.println("Logging SOAP Response:");
-        System.out.println("SOAP Response: " + response);
-        System.out.println("Timestamp: " + System.currentTimeMillis());
+        logger.info("SOAP Response: {}", response);
+        logger.info("Timestamp: {}", System.currentTimeMillis());
     }
 
     private void logError(Exception e) {
-        System.err.println("Error: " + e.getMessage());
-        System.err.println("Timestamp: " + System.currentTimeMillis());
+        logger.error("Error: {}", e.getMessage(), e);
+        logger.error("Timestamp: {}", System.currentTimeMillis());
     }
 
     private void logError(String message) {
-        System.err.println("Error: " + message);
-        System.err.println("Timestamp: " + System.currentTimeMillis());
+        logger.error("Error: {}", message);
+        logger.error("Timestamp: {}", System.currentTimeMillis());
     }
 
-    // Method to log API consumption
     private void logConsumption(String apiId, String userIp, int responseStatus, long requestDuration, String userId, String additionalInfo) {
         LogEntry log = LogEntry.builder()
                 .apiId(apiId)

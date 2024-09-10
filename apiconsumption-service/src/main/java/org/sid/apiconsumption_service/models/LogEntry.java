@@ -13,6 +13,8 @@ import java.util.Date;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class LogEntry {
 
     private Long id;

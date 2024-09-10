@@ -8,5 +8,5 @@ import java.util.Map;
 
 public interface ApiConsumerService {
 
-   ResponseEntity<String> consumeApi(String apiId, String requestBody, Map<String, String> queryParams, Map<String, String> headers) ;
+    ResponseEntity<String> consumeApi(String apiId, String requestBody, Map<String, String> queryParams, Map<String, String> headers) ;
 }

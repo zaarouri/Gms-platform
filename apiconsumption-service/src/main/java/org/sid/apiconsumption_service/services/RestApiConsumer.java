@@ -1,4 +1,5 @@
 package org.sid.apiconsumption_service.services;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
 import java.util.Date;
 import java.util.Map;
 
@@ -31,12 +33,7 @@ public class RestApiConsumer implements ApiConsumerService {
 
     @Override
     public ResponseEntity<String> consumeApi(String apiId, String requestBody, Map<String, String> queryParams, Map<String, String> headers) {
-
         ApiModel apiModel = apiClient.getById(apiId);
-
-        //todo
-        // UserModel userModel = userClient.getUserById("hada 5asni njibo mn keycloack client fach tssali manal ");
-        // if (!userModel.getApiModelsIds().contains(apiModel.getId())) throw new RuntimeException("User not allowed to consume this api ");
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setAll(apiModel.getHeaders());
@@ -70,8 +67,12 @@ public class RestApiConsumer implements ApiConsumerService {
                 .userIp(userIp) // Add user IP
                 .build();
 
-        // Send log data to logs service using Feign Client
-        logsServiceClient.log(log);
+        // Send log data to logs service using Feign Client with error handling
+        try {
+            logsServiceClient.log(log);
+        } catch (Exception e) {
+            System.err.println("Failed to log consumption: " + e.getMessage());
+        }
 
         return response;
     }

@@ -2,9 +2,9 @@ package org.sid.apiconsumption_service.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.sid.apiconsumption_service.models.ApiModel;
+import org.sid.apiconsumption_service.clients.ApiModelRestClient;
 import org.sid.apiconsumption_service.services.ApiConsumerService;
 import org.sid.apiconsumption_service.services.ApiConsumerServiceFactory;
-import org.sid.apiconsumption_service.clients.ApiModelRestClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

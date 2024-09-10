@@ -1,8 +1,8 @@
 package org.sid.logs_service.service.impls;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sid.logs_service.models.LogEntry;
+import org.sid.logs_service.repositories.LogsRepo;
 import org.sid.logs_service.service.LogsService;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -15,10 +15,12 @@ import java.util.UUID;
 public class LogsServiceImpl implements LogsService {
 
     private final KafkaTemplate<String, LogEntry> kafkaTemplate;
+    private final LogsRepo logsRepo;
     private static final String TOPIC = "api-consumption-logs";
 
     @Override
-    public void logConsumption(String apiId, String userIp, int responseStatus, long requestDuration, String userId, String additionalInfo) {
+    public LogEntry logConsumption(String apiId, String userIp, int responseStatus, long requestDuration, String userId, String additionalInfo) {
+        // Create and save log entry to the database
         LogEntry logEntry = LogEntry.builder()
                 .apiId(apiId)
                 .userIp(userIp)
@@ -29,7 +31,11 @@ public class LogsServiceImpl implements LogsService {
                 .additionalInfo(additionalInfo)
                 .build();
 
-        // Send log entry to Kafka topic
-        kafkaTemplate.send(new ProducerRecord<>(TOPIC, logEntry));
+        LogEntry savedLog = logsRepo.save(logEntry);  // Save the log to the database
+
+        // Send the log entry to Kafka for further processing
+        kafkaTemplate.send(TOPIC, UUID.randomUUID().toString(), savedLog);
+
+        return savedLog;  // Return the saved log entry
     }
 }

@@ -24,7 +24,7 @@ public class LogsController {
     private final LogsRepo logsRepo;
 
     @PostMapping("/log")
-    public void log(@RequestBody LogEntry logData) {  // Changed to LogEntry
+    public ResponseEntity<Void> log(@RequestBody LogEntry logData) {
         logsService.logConsumption(
                 logData.getApiId(),
                 logData.getUserIp(),
@@ -33,28 +33,25 @@ public class LogsController {
                 logData.getUserId(),
                 logData.getAdditionalInfo()
         );
+        return ResponseEntity.ok().build();  // Return 200 status
     }
-
 
     @GetMapping(value = "/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<LogEntry> streamLogs() {
-        // Track the timestamp of the last sent log
         final Date[] lastTimestamp = {new Date()};
 
         return Flux.interval(Duration.ofSeconds(1))
                 .flatMap(sequence -> {
                     List<LogEntry> logs = logsRepo.findLogsSince(lastTimestamp[0]);
                     if (!logs.isEmpty()) {
-                        lastTimestamp[0] = logs.get(logs.size() - 1).getTimestamp(); // Update the timestamp
+                        lastTimestamp[0] = logs.get(logs.size() - 1).getTimestamp(); // Update timestamp
                     }
                     return Flux.fromIterable(logs);
                 });
     }
+
     @GetMapping("/all")
-    public ResponseEntity<List<LogEntry>> logEntryResponse (){
-        return ResponseEntity.ok().body(logsRepo.findAll().stream().toList());
-
-
+    public ResponseEntity<List<LogEntry>> getAllLogs() {
+        return ResponseEntity.ok(logsRepo.findAll());
     }
-
 }

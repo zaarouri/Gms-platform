@@ -1,0 +1,58 @@
+# Spring Application Information
+spring:
+  application:
+    name: logs-service
+
+  # Config Server Import
+  config:
+    import: optional:configserver:http://localhost:8888/  # Optional Spring Cloud Config Server
+
+  # Database Configuration
+  datasource:
+    url: jdbc:mysql://localhost:3306/platform-db?createDatabaseIfNotExist=true
+    username: root
+    password:  # Replace 'your_password' with the actual MySQL password
+    driver-class-name: com.mysql.cj.jdbc.Driver  # Correct MySQL driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update   # Use 'update' in dev, 'validate' or 'none' in production
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect  # Explicitly set the dialect
+        format_sql: true  # Formats SQL for better readability in logs
+
+# Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: logs_group
+      auto-offset-reset: earliest
+      enable-auto-commit: false  # Disabling auto-commit for better control
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted.packages: org.sid.logs_service.models  # Adjusted JSON trusted packages
+            value.default.type: org.sid.logs_service.models.LogEntry
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# Consul Configuration
+  cloud:
+    consul:
+      discovery:
+        prefer-ip-address: true
+
+# Logging configuration
+logging:
+  level:
+    org.springframework.kafka: INFO
+    org.apache.kafka: INFO
+
+# Server Configuration
+server:
+  port: 8084

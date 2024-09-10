@@ -23,9 +23,8 @@ spring:
           predicates:
             - Path=/userManagement-service/**
 
-
         - id: logs-service
-          uri: http://localhost:8085
+          uri: http://localhost:8084
           predicates:
             - Path=/logs-service/**
 
