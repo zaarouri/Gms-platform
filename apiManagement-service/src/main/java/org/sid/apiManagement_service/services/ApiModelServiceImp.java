@@ -78,6 +78,7 @@ public class ApiModelServiceImp implements ApiModelService {
                 .collect(Collectors.toList());
     }
 
+
     /**
      * Update an existing API model.
      *
@@ -113,14 +114,32 @@ public class ApiModelServiceImp implements ApiModelService {
         if (apiModel.isArchived()) {
             return apiModelMapper.toDto(apiModel);
         }
-        ApiModel archivedApiModel = new ApiModel();
-        archivedApiModel.setId(apiModel.getId());
-        archivedApiModel.setName(apiModel.getName());
-        archivedApiModel.setArchived(true);
 
-        ApiModel updatedApiModel = apiModelRepository.save(archivedApiModel);
+        // Modifier directement l'objet existant
+        apiModel.setArchived(true);
+        apiModel.setArchivedAt(new Date()); // Définir la date actuelle comme date d'archivage
+
+        // Sauvegarder les modifications
+        ApiModel updatedApiModel = apiModelRepository.save(apiModel);
         return apiModelMapper.toDto(updatedApiModel);
     }
+
+
+    @Override
+    public ApiModelDto unarchiveApiModel(String apiId) {
+        ApiModel apiModel = apiModelRepository.findById(apiId)
+                .orElseThrow(() -> new RuntimeException("ApiModel non trouvé"));
+
+        if (!apiModel.isArchived()) {
+            return apiModelMapper.toDto(apiModel);
+        }
+
+        apiModel.setArchived(false);
+        apiModel.setArchivedAt(null); // Effacer la date d'archivage
+        ApiModel updatedApiModel = apiModelRepository.save(apiModel);
+        return apiModelMapper.toDto(updatedApiModel);
+    }
+
 
     /**
      * Get all API models of a specific type.
@@ -164,6 +183,14 @@ public class ApiModelServiceImp implements ApiModelService {
             throw new EntityNotFoundException("No archived API models found.");
         }
         return archivedApis.stream()
+                .map(apiModelMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ApiModelDto> getAll() throws EntityNotFoundException {
+        List<ApiModel> apiModels = apiModelRepository.findAll();
+        return apiModels.stream()
                 .map(apiModelMapper::toDto)
                 .collect(Collectors.toList());
     }

@@ -20,9 +20,13 @@ public interface ApiModelService {
 
      ApiModelDto archiveApiModel(String apiId) throws  EntityNotFoundException;
 
+     ApiModelDto unarchiveApiModel(String id) throws  EntityNotFoundException;
      List<ApiModelDto> getApisByType(ApiType type) throws EntityNotFoundException;
 
      List<ApiModelDto> getApisSupportingMethod(HttpMethod method) throws EntityNotFoundException;
-    List<ApiModelDto> getAllArchivedApis() throws EntityNotFoundException;
+     List<ApiModelDto> getAllArchivedApis() throws EntityNotFoundException;
+
+     List<ApiModelDto> getAll() throws EntityNotFoundException;
+
 }
 

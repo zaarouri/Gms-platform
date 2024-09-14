@@ -12,7 +12,6 @@ public interface UserService {
     UserDto updateUser(String keycloakId,UserDto userDto);
     UserDto deleteUser(String keycloakId);
     UserProfileDto getProfile(String keycloakId);
-    UserDto assignApiModeltoUser(String apiId, String keycloakId);
-    UserDto getUserByUsername(String username);
-
+    UserDto assignApiModeltoUser(String id, String keycloakId);
+    UserDto removeApiModelFromUser(String apiModelId, String keycloakId);
 }

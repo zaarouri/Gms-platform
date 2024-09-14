@@ -16,10 +16,9 @@ import java.util.List;
 @RequestMapping("/apis")
 @RequiredArgsConstructor
 public class ApiModelController {
-
     private final ApiModelService apiModelService;
 
-    @PostMapping
+    @PostMapping("/apis-save")
     public ResponseEntity<ApiModelDto> createApi(@RequestBody ApiModelDto apiModelDto) {
         ApiModelDto createdApi = apiModelService.createApi(apiModelDto);
         return new ResponseEntity<>(createdApi, HttpStatus.CREATED);
@@ -31,13 +30,13 @@ public class ApiModelController {
         return ResponseEntity.ok(api);
     }
 
-    @GetMapping("/all")
+    @GetMapping("/apis-all")
     public ResponseEntity<List<ApiModelDto>> getAllApis() {
         List<ApiModelDto> apis = apiModelService.getAllApis();
         return ResponseEntity.ok(apis);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/apis-update/{id}")
     public ResponseEntity<ApiModelDto> updateApi(@PathVariable String id, @RequestBody ApiModelDto apiModelDto) {
         ApiModelDto updatedApi = apiModelService.updateApi(id, apiModelDto);
         return ResponseEntity.ok(updatedApi);
@@ -49,6 +48,11 @@ public class ApiModelController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/unarchive/{id}")
+    public ResponseEntity<Void> unarchiveApi(@PathVariable String id) {
+        apiModelService.unarchiveApiModel(id);
+        return ResponseEntity.noContent().build();
+    }
     @GetMapping("/type/{type}")
     public ResponseEntity<List<ApiModelDto>> getApisByType(@PathVariable ApiType type) {
         List<ApiModelDto> apis = apiModelService.getApisByType(type);
@@ -58,6 +62,17 @@ public class ApiModelController {
     @GetMapping("/method/{method}")
     public ResponseEntity<List<ApiModelDto>> getApisSupportingMethod(@PathVariable HttpMethod method) {
         List<ApiModelDto> apis = apiModelService.getApisSupportingMethod(method);
+        return ResponseEntity.ok(apis);
+    }
+
+    @GetMapping("/archived")
+    public List<ApiModelDto> getAllArchivedApiModels() {
+        return apiModelService.getAllArchivedApis();
+    }
+
+    @GetMapping("/apis")
+    public ResponseEntity<List<ApiModelDto>> getAll() {
+        List<ApiModelDto> apis = apiModelService.getAll();
         return ResponseEntity.ok(apis);
     }
 }

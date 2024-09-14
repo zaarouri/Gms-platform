@@ -16,15 +16,14 @@ import org.sid.userManagement_service.clients.ApiModelRestClient;
 import org.sid.userManagement_service.dtos.UserDto;
 import org.sid.userManagement_service.dtos.UserProfileDto;
 import org.sid.userManagement_service.entities.UserModel;
-import org.sid.userManagement_service.exception.InvalidEmailException;
-import org.sid.userManagement_service.exception.InvalidPasswordException;
-import org.sid.userManagement_service.exception.KeycloakUpdateException;
-import org.sid.userManagement_service.exception.UserNotFoundException;
+import org.sid.userManagement_service.exception.*;
 import org.sid.userManagement_service.mappers.UserMapper;
 import org.sid.userManagement_service.models.ApiModel;
 import org.sid.userManagement_service.repositories.UserRepo;
 import org.sid.userManagement_service.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.rest.webmvc.ResourceNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -41,8 +40,9 @@ public class UserServiceImpl implements UserService {
 
     private static final int MIN_PASSWORD_LENGTH = 6;
     private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-            "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{" + MIN_PASSWORD_LENGTH + ",}$"
+            "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=_-])(?=\\S+$).{" + MIN_PASSWORD_LENGTH + ",}$"
     );
+    private final PasswordEncoder passwordEncoder;
     private final ApiModelRestClient apiModelRestClient;
     private final UserMapper mapper;
     private final UserRepo userRepository;
@@ -72,6 +72,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto createUser(UserDto userDto) {
+        if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
+            throw new UserAlreadyExistsException("Un utilisateur avec ce nom d'utilisateur existe déjà");
+        }
+
         validatePassword(userDto.getPassword());
         validateEmail(userDto.getEmail());
         String keycloakId = createUserInKeycloak(userDto);
@@ -80,6 +84,7 @@ public class UserServiceImpl implements UserService {
         }
         UserModel userModel = mapper.toEntity(userDto);
         userModel.setKeycloakId(keycloakId);
+        userModel.setPassword(hashPassword(userDto.getPassword()));
         userModel.setRoles(userDto.getRoles());
         UserModel saved = userRepository.save(userModel);
         return mapper.toDto(saved);
@@ -95,6 +100,7 @@ public class UserServiceImpl implements UserService {
 
         if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
             validatePassword(userDto.getPassword());
+            userModel.setPassword(hashPassword(userDto.getPassword()));
         }
         try {
             updateUserInKeycloak(keycloakId, userDto);
@@ -140,40 +146,40 @@ public class UserServiceImpl implements UserService {
         return userProfile;
     }
     @Override
-    public UserDto assignApiModeltoUser(String apiId, String keycloakId) {
-        ApiModel apiModel = apiModelRestClient.getById(apiId);
+    public UserDto assignApiModeltoUser(String id, String keycloakId) {
+        ApiModel apiModel = apiModelRestClient.getById(id);
         if (apiModel == null) {
-            throw new RuntimeException("API model not found with ID: " + apiId);
+            throw new RuntimeException("ApiModel not found");
         }
 
         UserModel userModel = userRepository.findById(keycloakId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + keycloakId));
-
         List<String> apiModelsIds = Optional.ofNullable(userModel.getApiModelsIds()).orElse(new ArrayList<>());
-        if (!apiModelsIds.contains(apiId)) {
-            apiModelsIds.add(apiId);
-            userModel.setApiModelsIds(apiModelsIds);
-            userRepository.save(userModel);
+        if (!apiModelsIds.contains(id)) {
+            apiModelsIds.add(id);
         }
+        userModel.setApiModelsIds(apiModelsIds);
+
+        userRepository.save(userModel);
 
         UserDto userDto = mapper.toDto(userModel);
-        userDto.setApiModels(apiModelsIds.stream()
+        List<ApiModel> apiModels = apiModelsIds.stream()
                 .map(apiModelRestClient::getById)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+        userDto.setApiModels(apiModels);
 
-        return userDto;
-    }
-
-    @Override
-    public UserDto getUserByUsername(String username) throws UserNotFoundException {
-        UserModel user = userRepository.findByUsername(username).orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
-        UserDto userDto = mapper.toDto(user);
         return userDto;
     }
 
     private String createUserInKeycloak(UserDto userDto) {
         validateEmail(userDto.getEmail());
         validatePassword(userDto.getPassword());
+
+        UsersResource usersResource = getUsersResource();
+        List<UserRepresentation> existingUsers = usersResource.search(userDto.getUsername(), true);
+        if (!existingUsers.isEmpty()) {
+            throw new KeycloakUserAlreadyExistsException("User already exists in Keycloak");
+        }
 
         UserRepresentation userRepresentation = new UserRepresentation();
         userRepresentation.setEnabled(true);
@@ -188,7 +194,7 @@ public class UserServiceImpl implements UserService {
 
         userRepresentation.setCredentials(List.of(credentialRepresentation));
 
-        UsersResource usersResource = getUsersResource();
+
         Response response = usersResource.create(userRepresentation);
 
         log.info("Status Code: " + response.getStatus());
@@ -245,6 +251,16 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             throw new KeycloakUpdateException("Failed to update user in Keycloak", e);
         }
+    }
+    public UserDto removeApiModelFromUser(String apiModelId, String keycloakId) {
+        UserModel user = userRepository.findByKeycloakId(keycloakId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with keycloakId: " + keycloakId));
+
+        user.getApiModelsIds().remove(apiModelId);
+
+        userRepository.save(user);
+
+        return mapper.toDto(user);// Assuming you have a mapper to convert User to UserDto
     }
 
     private void assignRolesToUserInKeycloak(String keycloakUserId, List<String> roleNames) {
@@ -305,6 +321,8 @@ public class UserServiceImpl implements UserService {
             throw new KeycloakUpdateException("Failed to update roles for user " + keycloakUserId, e);
         }
     }
+
+
     private void validatePassword(String password) {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             throw new InvalidPasswordException("Password must be at least " + MIN_PASSWORD_LENGTH + " characters long");
@@ -321,6 +339,9 @@ public class UserServiceImpl implements UserService {
         if (!pattern.matcher(email).matches()) {
             throw new InvalidEmailException("Invalid email format: " + email);
         }
+    }
+    public String hashPassword(String password) {
+        return passwordEncoder.encode(password);
     }
     private UsersResource getUsersResource(){
         return keycloak.realm(realm).users();

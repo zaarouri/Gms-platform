@@ -1,9 +1,6 @@
 package org.sid.apiconsumption_service.services;
 
 import org.sid.apiconsumption_service.models.ApiModel;
-import org.sid.apiconsumption_service.services.ApiConsumerService;
-import org.sid.apiconsumption_service.services.RestApiConsumer;
-import org.sid.apiconsumption_service.services.SoapApiConsumer;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -61,7 +61,10 @@ public class SoapApiConsumer implements ApiConsumerService {
             // Add additional headers if provided
             if (headers != null) {
                 headers.forEach((key, value) -> {
-                    if (!"content-length".equalsIgnoreCase(key) && !"host".equalsIgnoreCase(key)) {
+                    // Exclude restricted headers
+                    if (!"content-length".equalsIgnoreCase(key) &&
+                            !"host".equalsIgnoreCase(key) &&
+                            !"connection".equalsIgnoreCase(key)) {
                         requestBuilder.header(key, value);
                     }
                 });

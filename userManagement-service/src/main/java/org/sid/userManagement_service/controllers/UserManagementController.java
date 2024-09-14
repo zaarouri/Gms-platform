@@ -23,17 +23,14 @@ public class UserManagementController {
     public UserDto getUserById(@PathVariable String keycloakId) {
         return userService.getUserById(keycloakId);
     }
-
     @PostMapping("/users-save")
     public UserDto createUser(@RequestBody UserDto userDto) {
         return userService.createUser(userDto);
     }
-
     @PutMapping("/users-update/{keycloakId}")
-    public UserDto updateUser(@PathVariable String keycloakId, @RequestBody UserDto userDto) {
-        return userService.updateUser(keycloakId, userDto);
+    public UserDto updateUser(@PathVariable String keycloakId,@RequestBody UserDto userDto) {
+        return userService.updateUser(keycloakId,userDto);
     }
-
     @DeleteMapping("/users-delete/{keycloakId}")
     public UserDto deleteUser(@PathVariable String keycloakId) {
         return userService.deleteUser(keycloakId);
@@ -43,14 +40,13 @@ public class UserManagementController {
     public UserProfileDto getProfile(@PathVariable String keycloakId) {
         return userService.getProfile(keycloakId);
     }
-
     @PostMapping("/users-assignUserToApi")
-    public UserDto assignUserToApi(@RequestParam String apiId, @RequestParam String keycloakId) {
-        UserDto userDto = userService.assignApiModeltoUser(apiId, keycloakId);
+    public UserDto assignUserToApi(@RequestParam("id") String id, @RequestParam("keycloakId") String keycloakId) {
+        UserDto userDto = userService.assignApiModeltoUser(id, keycloakId);
         return userDto;
     }
-    @GetMapping("/users/{username}")
-    public UserDto getUserByUsername(@RequestParam String username) {
-        return userService.getUserByUsername(username);
+    @DeleteMapping("/users-removeApi")
+    public UserDto removeApiFromUser(@RequestParam String id, @RequestParam String keycloakId) {
+        return userService.removeApiModelFromUser(id, keycloakId);
     }
 }
